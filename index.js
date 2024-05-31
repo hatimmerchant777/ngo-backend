@@ -2,6 +2,7 @@ const express = require("express");
 const mongoose = require("mongoose");
 const edu = require("./Edu.js");
 const bodyParser = require("body-parser");
+const cors = require('cors');
 
 const nodemailer = require('nodemailer');
 
@@ -19,6 +20,7 @@ mongoose
     const app = express();
     app.use(express.json());
     app.use(bodyParser.urlencoded({ extended: false }));
+    app.use(cors());
 
     // Define route for form submission
     app.post("/userContact", async (req, res) => {
