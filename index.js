@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const edu = require("./Edu.js");
 const bodyParser = require("body-parser");
 const cors = require('cors');
-
+const userRouter=require('./main.js')
 const nodemailer = require('nodemailer');
 
 let PORT = process.env.PORT || 3030;
@@ -21,16 +21,19 @@ mongoose
     app.use(express.json());
     app.use(bodyParser.urlencoded({ extended: false }));
     app.use(cors());
+    app.use("/api",userRouter)
 
     // Define route for form submission
     app.post("/userContact", async (req, res) => {
       // Extract form data from request body
       const { selectedOPTION,toEmail,userName, userMobile, userAddress,userType,userAbout,userHelpCategory,userQualification,userCity,userPin } = req.body;
       let mailContent;
+      let mailSubject;
       
       if (`${selectedOPTION}` === "help") {
       // Construct email content
-       mailContent = `
+      mailSubject= `Needed Help for ${userHelpCategory}`;
+      mailContent = `
         
       <p>I hope this email finds you well. My name is Hatim Merchant, and I am writing on behalf of <strong>${userName}</strong>, who is in urgent need of assistance regarding <strong>${userHelpCategory}</strong>.</p>
 
@@ -64,6 +67,7 @@ mongoose
       `;
       }else if (`${selectedOPTION}` === "volunteer") {
         // Email content for volunteer option
+        mailSubject= `Wanted to join for Volunteering`
         mailContent = `
           <p>I hope this email finds you well. My name is Hatim Merchant, and I am writing on behalf of <strong>${userName}</strong>, who is interested in volunteering with your esteemed organization.</p>
   
@@ -105,12 +109,14 @@ mongoose
           pass: 'lnbi vhkw jfcu mhrk',
         },
       });
+
+
   
       // Email options
       const mailOptions = {
         from: 'uniteup777@gmail.com',
         to: toEmail, // Replace with NGO's email address
-        subject: `Needed Help for ${userHelpCategory}` ,
+        subject: mailSubject ,
         html: mailContent,
       };
   
@@ -126,8 +132,10 @@ mongoose
   
 
     app.get("/edu", async (req, res) => {
-      const { category,city } = req.query;
+      const { category,city,pageNumber,firstTime,dataLimit } = req.query;
       let eduData;
+      let regex;
+      console.log(category);
       if (category && city!="undefined") {
         const regexCat = new RegExp(category, 'i');
         const regexCity = new RegExp(city, 'i');
@@ -136,15 +144,25 @@ mongoose
               { key_issue: { $regex:regexCat } },
               { "contacts.City": { $regex:regexCity } }
           ]
-      }) 
+      }).skip((pageNumber)*dataLimit).limit(dataLimit);
       } 
       else if (category){    
-        const regex = new RegExp(category, 'i');
-        eduData = await edu.find({ key_issue: { $regex:regex } }) 
+        regex = new RegExp(category, 'i');
+        eduData = await edu.find({ key_issue: { $regex:regex } }).skip((pageNumber)*dataLimit).limit(dataLimit);
+        console.log("I am in category");
+        
       } else {   
-        eduData = await edu.find();
+        eduData = await edu.find().skip((pageNumber)*dataLimit).limit(dataLimit);
       }
-      res.send(eduData);
+      console.log(regex);
+      let totalDataLength = 0;
+      if(firstTime != null && firstTime == 'true' ){
+        totalDataLength =  regex ? await  edu.countDocuments({ key_issue: { $regex:regex } }) :await edu.countDocuments();
+      }
+      
+      res.json({totalDataLength : totalDataLength, data : eduData})
+      
+      // res.send(eduData);
     });
     app.get("/edu/:id", async (req, res) => {
       const eduData = await edu.findOne({ _id: req.params.id });
