@@ -3,7 +3,7 @@ const mongoose = require("mongoose");
 const edu = require("./Edu.js");
 const bodyParser = require("body-parser");
 const cors = require('cors');
-const userRouter=require('./main.js')
+// const userRouter=require('./main.js')
 const nodemailer = require('nodemailer');
 
 let PORT = process.env.PORT || 3030;
@@ -21,7 +21,7 @@ mongoose
     app.use(express.json());
     app.use(bodyParser.urlencoded({ extended: false }));
     app.use(cors());
-    app.use("/api",userRouter)
+    // app.use("/api",userRouter);
 
     // Define route for form submission
     app.post("/userContact", async (req, res) => {
@@ -132,37 +132,27 @@ mongoose
   
 
     app.get("/edu", async (req, res) => {
-      const { category,city,pageNumber,firstTime,dataLimit } = req.query;
+      const { category,city } = req.query;
       let eduData;
       let regex;
-      console.log(category);
+     
       if (category && city!="undefined") {
         const regexCat = new RegExp(category, 'i');
         const regexCity = new RegExp(city, 'i');
         eduData = await edu.find({
           $and: [
-              { key_issue: { $regex:regexCat } },
-              { "contacts.City": { $regex:regexCity } }
+              { 'Key Issues.Key Issues': { $regex:regexCat } },
+              { 'Contact Details.City': { $regex:regexCity } }
           ]
-      }).skip((pageNumber)*dataLimit).limit(dataLimit);
+      });
       } 
       else if (category){    
         regex = new RegExp(category, 'i');
-        eduData = await edu.find({ key_issue: { $regex:regex } }).skip((pageNumber)*dataLimit).limit(dataLimit);
-        console.log("I am in category");
-        
+        eduData = await edu.find({ 'Key Issues.Key Issues': { $regex:regex } }); 
       } else {   
-        eduData = await edu.find().skip((pageNumber)*dataLimit).limit(dataLimit);
+        eduData = await edu.find();
       }
-      console.log(regex);
-      let totalDataLength = 0;
-      if(firstTime != null && firstTime == 'true' ){
-        totalDataLength =  regex ? await  edu.countDocuments({ key_issue: { $regex:regex } }) :await edu.countDocuments();
-      }
-      
-      res.json({totalDataLength : totalDataLength, data : eduData})
-      
-      // res.send(eduData);
+      res.send(eduData);
     });
     app.get("/edu/:id", async (req, res) => {
       const eduData = await edu.findOne({ _id: req.params.id });
